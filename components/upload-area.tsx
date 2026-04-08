@@ -10,9 +10,12 @@ import { Upload, X } from "lucide-react"
 interface UploadAreaProps {
   onUpload: (files: File[]) => Promise<void>
   isLoading: boolean
+  contextLabel?: string
+  /** Smaller padding for use inside dialogs */
+  compact?: boolean
 }
 
-export function UploadArea({ onUpload, isLoading }: UploadAreaProps) {
+export function UploadArea({ onUpload, isLoading, contextLabel, compact }: UploadAreaProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -54,7 +57,7 @@ export function UploadArea({ onUpload, isLoading }: UploadAreaProps) {
           isDragging
             ? "border-primary bg-primary/10 dark:bg-primary/5"
             : "border-dashed border-muted-foreground/20 hover:border-primary/50"
-        } rounded-xl p-12`}
+        } rounded-xl ${compact ? "p-6" : "p-12"}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -65,9 +68,10 @@ export function UploadArea({ onUpload, isLoading }: UploadAreaProps) {
         }}
       >
         <div className="flex flex-col items-center justify-center text-center">
-          <Upload className="mb-4 h-12 w-12 text-primary" />
-          <h3 className="mb-2 text-lg font-medium">Drag and drop your files</h3>
-          <p className="mb-6 text-sm text-muted-foreground">or click to browse from your computer</p>
+          <Upload className={`mb-4 text-primary ${compact ? "h-10 w-10" : "h-12 w-12"}`} />
+          <h3 className={`mb-2 font-medium ${compact ? "text-base" : "text-lg"}`}>Drag and drop your files</h3>
+          <p className="mb-2 text-sm text-muted-foreground">or click to browse from your computer</p>
+          {contextLabel && !compact ? <p className="mb-4 text-xs text-primary">Uploading to: {contextLabel}</p> : null}
           <Button
             type="button"
             variant="outline"
@@ -118,7 +122,7 @@ export function UploadArea({ onUpload, isLoading }: UploadAreaProps) {
             </div>
             <Button
               onClick={handleUpload}
-              className="w-full bg-gradient-to-r from-primary to-accent"
+              className="w-full bg-linear-to-r from-primary to-accent"
               disabled={isLoading}
             >
               {isLoading ? "Uploading..." : "Upload Files"}

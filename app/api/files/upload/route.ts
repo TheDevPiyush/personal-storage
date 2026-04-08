@@ -16,9 +16,24 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData()
     const file = formData.get("file") as File
+    const folderIdRaw = formData.get("folderId")
+    const folderId = typeof folderIdRaw === "string" && folderIdRaw.length > 0 ? folderIdRaw : null
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
+    }
+
+    if (folderId) {
+      const { data: folder, error: folderError } = await supabase
+        .from("folders")
+        .select("id")
+        .eq("id", folderId)
+        .eq("user_id", user.id)
+        .single()
+
+      if (folderError || !folder) {
+        return NextResponse.json({ error: "Folder not found or folders migration not applied yet" }, { status: 404 })
+      }
     }
 
     // Generate unique file path
@@ -47,17 +62,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Storage error: ${uploadError.message || "Unknown error"}` }, { status: 500 })
     }
 
-    const { data: fileData, error: dbError } = await admin
-      .from("files")
-      .insert({
-        user_id: user.id,
-        name: file.name,
-        file_type: file.type,
-        file_size: file.size,
-        storage_path: storagePath,
-      })
-      .select()
+    const insertPayload: Record<string, string | number | null> = {
+      user_id: user.id,
+      name: file.name,
+      file_type: file.type,
+      file_size: file.size,
+      storage_path: storagePath,
+    }
 
+    if (folderId) {
+      insertPayload.folder_id = folderId
+    }
+
+    let { data: fileData, error: dbError } = await admin.from("files").insert(insertPayload).select()
+
+    // Backward compatibility: if folder_id column is not migrated yet, retry without it.
+    if (dbError?.code === "PGRST204" && "folder_id" in insertPayload) {
+      delete insertPayload.folder_id
+      const retry = await admin.from("files").insert(insertPayload).select()
+      fileData = retry.data
+      dbError = retry.error
+    }
     if (dbError) {
       console.error("[v0] Database error:", dbError)
       // Clean up uploaded file if database insert fails

@@ -6,6 +6,14 @@ import { Download, Share2, Link2, Check } from "lucide-react"
 import { useState } from "react"
 import type { FileItem } from "./file-grid"
 
+function formatFileSize(bytes: number) {
+  if (bytes === 0) return "0 B"
+  const sizes = ["B", "KB", "MB", "GB"]
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  const value = bytes / Math.pow(1024, i)
+  return `${value.toFixed(value >= 10 || i === 0 ? 0 : 1)} ${sizes[i]}`
+}
+
 interface FilePreviewModalProps {
   file: FileItem | null
   isOpen: boolean
@@ -112,7 +120,7 @@ export function FilePreviewModal({ file, isOpen, onClose, onShareToggle }: FileP
             </div>
             <div className="flex justify-between">
               <span className="text-foreground/70">Size:</span>
-              <span className="text-foreground font-medium">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+              <span className="text-foreground font-medium">{formatFileSize(file.size)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-foreground/70">Uploaded:</span>
